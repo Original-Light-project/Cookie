@@ -105,11 +105,17 @@ public class Cookie extends JavaPlugin implements Listener {
             event.setCancelled(true);
 
             int slot = event.getSlot();
+
             if (slot == 13) {
                 addCookies(player, 1);
 
+                // Update cookie button (slot 13)
                 ItemStack cookie = cookie(player, event.getCurrentItem());
                 event.getInventory().setItem(13, cookie);
+
+                // Update leaderboard info (slot 26)
+                ItemStack leaderboard = leaderboardInfo(player);
+                event.getInventory().setItem(26, leaderboard);
             }
         }
     }
@@ -119,11 +125,47 @@ public class Cookie extends JavaPlugin implements Listener {
         if (!cookies.containsKey(player.getUniqueId())) {
             cookies.put(player.getUniqueId(), 0);
         }
+
+        // Cookie Button (slot 13)
         ItemStack cookie = cookie(player, new ItemStack(Material.COOKIE));
         inv.setItem(13, cookie);
+
+        // Leaderboard Info (slot 26)
+        ItemStack leaderboard = leaderboardInfo(player);
+        inv.setItem(26, leaderboard);
+
         player.openInventory(inv);
     }
 
+    public ItemStack leaderboardInfo(Player player) {
+        ItemStack leaderboard = new ItemStack(Material.NETHER_STAR);
+        ItemMeta lbMeta = leaderboard.getItemMeta();
+        lbMeta.setDisplayName("§bLeaderboard");
+
+        int totalCookies = cookies.get(player.getUniqueId());
+        int rank = getRank(player.getUniqueId());
+
+        lbMeta.setLore(java.util.Arrays.asList(
+                "§eTotal Cookies: " + commaFormat(totalCookies),
+                "§bRank: #" + rank
+        ));
+
+        leaderboard.setItemMeta(lbMeta);
+        return leaderboard;
+    }
+
+    public int getRank(UUID uuid) {
+        // Sort players by cookies descending
+        java.util.List<Map.Entry<UUID, Integer>> sorted = new java.util.ArrayList<>(cookies.entrySet());
+        sorted.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+        for (int i = 0; i < sorted.size(); i++) {
+            if (sorted.get(i).getKey().equals(uuid)) {
+                return i + 1; // 1-based rank
+            }
+        }
+        return -1;
+    }
     public void addCookies(Player player, int amount) {
         UUID uuid = player.getUniqueId();
         cookies.put(uuid, cookies.getOrDefault(uuid, 0) + amount);
@@ -132,7 +174,7 @@ public class Cookie extends JavaPlugin implements Listener {
     public ItemStack cookie(Player player, ItemStack source) {
         if (!source.getType().equals(Material.COOKIE)) return null;
         ItemMeta meta = source.getItemMeta();
-        meta.setDisplayName("§r" + cookies.getOrDefault(player.getUniqueId(), 0));
+        meta.setDisplayName("§e" + commaFormat(cookies.getOrDefault(player.getUniqueId(), 0)) + "§6 Cookies");
         source.setItemMeta(meta);
         return source;
     }
