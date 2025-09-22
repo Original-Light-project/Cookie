@@ -9,8 +9,6 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -34,7 +32,7 @@ public class Cookie extends JavaPlugin implements Listener {
         instance = this;
 
         this.getLogger().info("Cookie Clicker Enabled");
-        Bukkit.getPluginCommand("cookie").setExecutor(this);
+        Bukkit.getPluginCommand("cookie").setExecutor(new CookieCommand());
         Bukkit.getPluginManager().registerEvents(this, this);
 
         loadCookies();
@@ -82,19 +80,6 @@ public class Cookie extends JavaPlugin implements Listener {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-    }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cThis command can only be executed by players!");
-            return true;
-        }
-
-        final Player player = (Player) sender;
-        openCookieClicker(player);
-
-        return true;
     }
 
     @EventHandler
@@ -179,7 +164,7 @@ public class Cookie extends JavaPlugin implements Listener {
         return source;
     }
 
-    public String commaFormat(long number) {
+    public static String commaFormat(long number) {
         final DecimalFormat COMMA_FORMAT = new DecimalFormat("#,###");
         return COMMA_FORMAT.format(number);
     }

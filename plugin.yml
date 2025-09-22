@@ -3,6 +3,21 @@ main: ol.cookie.Cookie
 api-version: 1.21.4
 version: 0.1
 author: Shirako
+
 commands:
   cookie:
-    description: "Open Cookie Clicker"
+    description: Open Cookie Clicker GUI or manage cookies
+    usage: |
+      /cookie                - Open Cookie Clicker GUI
+      /cookie reset          - Reset all players' cookies (requires confirm)
+      /cookie reset confirm  - Confirm reset of all players' cookies
+      /cookie reset <player> - Reset cookies of a specific player
+      /cookie set <player> <amount> - Set cookies for a player
+      /cookie add <player> <amount> - Add cookies for a player
+      /cookie remove <player> <amount> - Remove cookies for a player
+    aliases: [cookies]
+
+permissions:
+  cookie.admin:
+    description: Allows resetting and setting cookies for players
+    default: op

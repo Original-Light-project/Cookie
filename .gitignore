@@ -3,10 +3,12 @@
 
 # Libraries
 [Ll]ib/
-[Bb]in/
 
 # Temporary Files
+[Bb]in/
+[Bb]uild/
 [Tt]emp/
 
-# Batch Files
-*.bat
+# Use for build JAR files
+build.bar
+build.ps1
