@@ -23,7 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Cookie extends JavaPlugin implements Listener {
-    public static HashMap<UUID, Integer> cookies = new HashMap<>();
+    public static HashMap<UUID, Long> cookies = new HashMap<>();
     public static Cookie instance;
 
     private File cookieFile;
@@ -65,7 +65,7 @@ public class Cookie extends JavaPlugin implements Listener {
         for (String key : cookieConfig.getKeys(false)) {
             try {
                 UUID uuid = UUID.fromString(key);
-                int amount = cookieConfig.getInt(key);
+                long amount = cookieConfig.getLong(key);
                 cookies.put(uuid, amount);
             } catch (IllegalArgumentException ex) {
                 this.getLogger().warning("Invalid UUID in cookie.yml: " + key);
@@ -74,13 +74,13 @@ public class Cookie extends JavaPlugin implements Listener {
     }
 
     private void saveCookies() {
-        for (Map.Entry<UUID, Integer> entry : cookies.entrySet()) {
+        for (Map.Entry<UUID, Long> entry : cookies.entrySet()) {
             cookieConfig.set(entry.getKey().toString(), entry.getValue());
         }
         try {
             cookieConfig.save(cookieFile);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -123,7 +123,7 @@ public class Cookie extends JavaPlugin implements Listener {
     public void openCookieClicker(Player player) {
         Inventory inv = Bukkit.createInventory(player, 27, "Cookie Clicker");
         if (!cookies.containsKey(player.getUniqueId())) {
-            cookies.put(player.getUniqueId(), 0);
+            cookies.put(player.getUniqueId(), 0L);
         }
 
         // Cookie Button (slot 13)
@@ -142,7 +142,7 @@ public class Cookie extends JavaPlugin implements Listener {
         ItemMeta lbMeta = leaderboard.getItemMeta();
         lbMeta.setDisplayName("§bLeaderboard");
 
-        int totalCookies = cookies.get(player.getUniqueId());
+        long totalCookies = cookies.get(player.getUniqueId());
         int rank = getRank(player.getUniqueId());
 
         lbMeta.setLore(java.util.Arrays.asList(
@@ -156,7 +156,7 @@ public class Cookie extends JavaPlugin implements Listener {
 
     public int getRank(UUID uuid) {
         // Sort players by cookies descending
-        java.util.List<Map.Entry<UUID, Integer>> sorted = new java.util.ArrayList<>(cookies.entrySet());
+        java.util.List<Map.Entry<UUID, Long>> sorted = new java.util.ArrayList<>(cookies.entrySet());
         sorted.sort((a, b) -> b.getValue().compareTo(a.getValue()));
 
         for (int i = 0; i < sorted.size(); i++) {
@@ -168,13 +168,13 @@ public class Cookie extends JavaPlugin implements Listener {
     }
     public void addCookies(Player player, int amount) {
         UUID uuid = player.getUniqueId();
-        cookies.put(uuid, cookies.getOrDefault(uuid, 0) + amount);
+        cookies.put(uuid, cookies.getOrDefault(uuid, 0L) + amount);
     }
 
     public ItemStack cookie(Player player, ItemStack source) {
         if (!source.getType().equals(Material.COOKIE)) return null;
         ItemMeta meta = source.getItemMeta();
-        meta.setDisplayName("§e" + commaFormat(cookies.getOrDefault(player.getUniqueId(), 0)) + "§6 Cookies");
+        meta.setDisplayName("§e" + commaFormat(cookies.getOrDefault(player.getUniqueId(), 0L)) + "§6 Cookies");
         source.setItemMeta(meta);
         return source;
     }
