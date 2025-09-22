@@ -1,0 +1,8 @@
+name: Cookie
+main: ol.cookie.Cookie
+api-version: 1.21.4
+version: 0.1
+author: Shirako
+commands:
+  cookie:
+    description: "Open Cookie Clicker"

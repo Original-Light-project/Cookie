@@ -1,0 +1,12 @@
+# Compiled Class Files
+*.Class
+
+# Libraries
+[Ll]ib/
+[Bb]in/
+
+# Temporary Files
+[Tt]emp/
+
+# Batch Files
+*.bat
