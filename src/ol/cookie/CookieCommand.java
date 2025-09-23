@@ -24,7 +24,7 @@ public class CookieCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 0) {
             if (player != null) {
-                Cookie.instance.openCookieClicker(player);
+                Guis.openCookieClicker(player);
             }
             return true;
         }

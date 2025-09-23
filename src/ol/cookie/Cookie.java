@@ -3,6 +3,7 @@ package ol.cookie;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -15,13 +16,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Cookie extends JavaPlugin implements Listener {
     public static HashMap<UUID, Long> cookies = new HashMap<>();
+    public static HashMap<UUID, Integer> milestonesReached = new HashMap<>();
+    public static HashMap<UUID, Integer> multipliers = new HashMap<>();
     public static Cookie instance;
 
     private File cookieFile;
@@ -46,42 +48,6 @@ public class Cookie extends JavaPlugin implements Listener {
         this.getLogger().info("Cookie Clicker Disabled");
     }
 
-    private void loadCookies() {
-        cookieFile = new File(getDataFolder(), "cookie.yml");
-
-        if (!cookieFile.exists()) {
-            cookieFile.getParentFile().mkdirs();
-            try {
-                cookieFile.createNewFile();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        cookieConfig = YamlConfiguration.loadConfiguration(cookieFile);
-
-        for (String key : cookieConfig.getKeys(false)) {
-            try {
-                UUID uuid = UUID.fromString(key);
-                long amount = cookieConfig.getLong(key);
-                cookies.put(uuid, amount);
-            } catch (IllegalArgumentException ex) {
-                this.getLogger().warning("Invalid UUID in cookie.yml: " + key);
-            }
-        }
-    }
-
-    private void saveCookies() {
-        for (Map.Entry<UUID, Long> entry : cookies.entrySet()) {
-            cookieConfig.set(entry.getKey().toString(), entry.getValue());
-        }
-        try {
-            cookieConfig.save(cookieFile);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         final Player player = (Player) event.getWhoClicked();
@@ -98,31 +64,59 @@ public class Cookie extends JavaPlugin implements Listener {
                 ItemStack cookie = cookie(player, event.getCurrentItem());
                 event.getInventory().setItem(13, cookie);
 
-                // Update leaderboard info (slot 26)
+                // Update leaderboard info (slot 25)
                 ItemStack leaderboard = leaderboardInfo(player);
-                event.getInventory().setItem(26, leaderboard);
+                event.getInventory().setItem(25, leaderboard);
+
+                // Update milestone info (slot 26)
+                ItemStack milestone = milestoneInfo(player);
+                event.getInventory().setItem(26, milestone);
             }
         }
     }
 
-    public void openCookieClicker(Player player) {
-        Inventory inv = Bukkit.createInventory(player, 27, "Cookie Clicker");
-        if (!cookies.containsKey(player.getUniqueId())) {
-            cookies.put(player.getUniqueId(), 0L);
+    public void loadCookies() {
+        if (cookieFile == null) {
+            cookieFile = new File(getDataFolder(), "cookie.yml");
+        }
+        if (!cookieFile.exists()) {
+            cookieFile.getParentFile().mkdirs();
+            saveResource("cookie.yml", false);
         }
 
-        // Cookie Button (slot 13)
-        ItemStack cookie = cookie(player, new ItemStack(Material.COOKIE));
-        inv.setItem(13, cookie);
+        cookieConfig = YamlConfiguration.loadConfiguration(cookieFile);
 
-        // Leaderboard Info (slot 26)
-        ItemStack leaderboard = leaderboardInfo(player);
-        inv.setItem(26, leaderboard);
+        for (String key : cookieConfig.getKeys(false)) {
+            try {
+                UUID uuid = UUID.fromString(key);
+                long cookieAmount = cookieConfig.getLong(key + ".cookies", 0L);
+                int milestoneLevel = cookieConfig.getInt(key + ".milestone", 0);
 
-        player.openInventory(inv);
+                cookies.put(uuid, cookieAmount);
+                milestonesReached.put(uuid, milestoneLevel);
+            } catch (IllegalArgumentException ignored) {}
+        }
     }
 
-    public ItemStack leaderboardInfo(Player player) {
+    public void saveCookies() {
+        if (cookieConfig == null) return;
+
+        for (UUID uuid : cookies.keySet()) {
+            long cookieAmount = cookies.getOrDefault(uuid, 0L);
+            int milestoneLevel = milestonesReached.getOrDefault(uuid, 0);
+
+            cookieConfig.set(uuid.toString() + ".cookies", cookieAmount);
+            cookieConfig.set(uuid.toString() + ".milestone", milestoneLevel);
+        }
+
+        try {
+            cookieConfig.save(cookieFile);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static ItemStack leaderboardInfo(Player player) {
         ItemStack leaderboard = new ItemStack(Material.NETHER_STAR);
         ItemMeta lbMeta = leaderboard.getItemMeta();
         lbMeta.setDisplayName("§bLeaderboard");
@@ -139,7 +133,23 @@ public class Cookie extends JavaPlugin implements Listener {
         return leaderboard;
     }
 
-    public int getRank(UUID uuid) {
+    public static ItemStack milestoneInfo(Player player) {
+        ItemStack ms = new ItemStack(Material.LADDER);
+        ItemMeta msMeta = ms.getItemMeta();
+        msMeta.setDisplayName("§bMilestones");
+
+        long totalCookies = cookies.getOrDefault(player.getUniqueId(), 0L);
+        int milestoneLevel = milestonesReached.getOrDefault(player.getUniqueId(), 0);
+
+        msMeta.setLore(Arrays.asList(
+            "§7Total Cookies: §e" + totalCookies,
+            "§7Milestone Level: §b" + milestoneLevel
+        ));
+        ms.setItemMeta(msMeta);
+        return ms;
+    }
+
+    public static int getRank(UUID uuid) {
         // Sort players by cookies descending
         java.util.List<Map.Entry<UUID, Long>> sorted = new java.util.ArrayList<>(cookies.entrySet());
         sorted.sort((a, b) -> b.getValue().compareTo(a.getValue()));
@@ -151,15 +161,34 @@ public class Cookie extends JavaPlugin implements Listener {
         }
         return -1;
     }
-    public void addCookies(Player player, int amount) {
+
+    public static void addCookies(Player player, int baseAmount) {
         UUID uuid = player.getUniqueId();
-        cookies.put(uuid, cookies.getOrDefault(uuid, 0L) + amount);
+        long current = cookies.getOrDefault(uuid, 0L);
+        int currentMilestoneLevel = milestonesReached.getOrDefault(uuid, 0);
+
+        int multiplier = currentMilestoneLevel + 1; // level 0 = x1, level 1 = x2...
+        long amount = (long) baseAmount * multiplier;
+
+        long newTotal = current + amount;
+        cookies.put(uuid, newTotal);
+
+        Milestones.checkMilestones(player, newTotal);
     }
 
-    public ItemStack cookie(Player player, ItemStack source) {
+    public static ItemStack cookie(Player player, ItemStack source) {
         if (!source.getType().equals(Material.COOKIE)) return null;
         ItemMeta meta = source.getItemMeta();
-        meta.setDisplayName("§e" + commaFormat(cookies.getOrDefault(player.getUniqueId(), 0L)) + "§6 Cookies");
+
+        long totalCookies = cookies.getOrDefault(player.getUniqueId(), 0L);
+        int milestoneLevel = milestonesReached.getOrDefault(player.getUniqueId(), 0);
+
+        meta.setDisplayName("§e" + commaFormat(totalCookies) + " §7Cookies");
+        meta.setLore(Arrays.asList(
+            "§7Click Multiplier: §ax" + (milestoneLevel + 1),
+            "§7Milestone Level: §b" + milestoneLevel
+        ));
+
         source.setItemMeta(meta);
         return source;
     }
